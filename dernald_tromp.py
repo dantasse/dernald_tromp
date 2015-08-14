@@ -79,15 +79,16 @@ def get_letter(phone, weirdness=1):
 # Returns a misspelled (but sort of pronounced the same) version of the text.
 # weirdness is on a scale from 1-5.
 def misspell(text, pronouncing_dictionary, weirdness=1):
-    exclude = set(string.punctuation)
     misspelled = []
     for word in text.split(' '):
-        word = ''.join(ch for ch in word if ch not in exclude)
-        if word.upper() not in pronouncing_dictionary:
+        word = word.upper().strip(string.punctuation)
+        if word.startswith('HTTP'):
+            continue
+        elif word not in pronouncing_dictionary:
             misspelled.append(word.upper())
         else:
             letters = ''
-            for phone in pronounce[word.upper()]:
+            for phone in pronounce[word]:
                 # if phone.endswith('0') and not phone.startswith('ER') and random.random() < .25:
                 #     continue # skip 25% of unstressed vowels, funnier that way.
                     # but don't skip ERs, they are important. and usually funny.
@@ -116,7 +117,6 @@ def make_image(text, image_filename):
         font = ImageFont.truetype(IMPACT, fontSize)
         textSize = font.getsize(text[0:30])
         print textSize
-
     textPositionX = (img.size[0]/2) - (textSize[0]/2)
     
     # We want the text to be visible when you first see it in the twitter
@@ -184,6 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('--images_dir', default='images')
     parser.add_argument('--pronouncing_dict_file',
         default='cmu_pronouncing_dict/cmudict-0.7b.txt')
+    parser.add_argument('--just_make_meme_with_text')
     args = parser.parse_args()
 
     pronounce = import_pronunciation_dictionary(args.pronouncing_dict_file)
@@ -192,9 +193,15 @@ if __name__ == '__main__':
     # not_pronounced_words = [w for w in foods if w.split()[0].upper() not in pronounce]
     # if len(not_pronounced_words) > 0:
         # print 'Warning! These words are unpronounced: ' + str(not_pronounced_words)
+    if args.just_make_meme_with_text:
+        text = args.just_make_meme_with_text
+        misspelled_text = misspell(text, pronounce)
+        misspelled_text = add_word_breaks(misspelled_text)
+        image = make_image(misspelled_text, 'usa-election_trump1.jpg')
+        exit(0)
 
     while True:
-        status = twitter.get_user_timeline(screen_name="realDonaldTrump")[0]
+        status = twitter.get_user_timeline(screen_name="realDonaldTrump")[random.randint(0, 4)]
         text = status['text']
         # tweet = get trump's latest
         misspelled_text = misspell(text, pronounce)
@@ -202,8 +209,7 @@ if __name__ == '__main__':
         image = make_image(misspelled_text, 'images/trump' + str(random.randint(0, 12)) + '.jpg')
         print "Posting %s as %s" % (text, misspelled_text)
         try:
-            pass
-            # post_tweet(image, misspelled_text)
+            post_tweet(image, misspelled_text)
         except twython.exceptions.TwythonError:
             print "Error once, trying again."
             try:
